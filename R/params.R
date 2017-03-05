@@ -169,8 +169,27 @@ is.param <- function(x) {
   return(inherits(x, "param"))
 }
 
+#' Coerce an object to type 'param'
+#'
+#' @param x An object
+#' @param warn TRUE if warning should be thrown if object is not of type param
+#'
+#' @return An object of type 'param'
+#' @export
+#'
+#' @examples
+#' as.param(param.discrete(c('heads', 'tails')))
+#' as.param(NULL)
+#' as.param(5)
+#' as.param(rnorm, warn=FALSE)
+#'
 as.param <- function(x, warn=TRUE) {
-
+  if(is.param(x)) {
+    x
+  } else {
+    if(warn) warning("Object x coerced to type 'param.fixed'")
+    param.fixed(x)
+  }
 }
 
 #' Generate a random parameter value

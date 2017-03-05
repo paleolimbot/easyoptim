@@ -4,8 +4,10 @@
 \alias{seibert.evolve}
 \title{Evolve a population of parameter values}
 \usage{
-seibert.evolve(params, values, probs = NULL, rescale = FALSE, seed = NULL,
-  validate = TRUE)
+seibert.evolve(params, values, probs = NULL, rescaler = c("rescale_none",
+  "rescale", "squish"), seed = NULL, validate = TRUE,
+  breedargs = list(breed.use1 = 0.41, breed.use2 = 0.41, breed.rinterpolate =
+  0.16, breed.mutate = 0.02))
 }
 \arguments{
 \item{params}{A \code{list} of parameters with identical names to \code{values}}
@@ -16,12 +18,15 @@ If all parameters are named parameters, this can be a data.frame.}
 \item{probs}{A vector of probabilities with which to weight sampling of the breeding couples.
 Can be NULL, indicating there is no preference.}
 
-\item{rescale}{Pass TRUE to rescale \code{probs} to the range (0, 1). This is useful if
+\item{rescaler}{Pass TRUE to rescale \code{probs} to the range (0, 1). Or optionally a function
+that transorms probs to valid probability weights. This is useful if
 the value of probs used is sometimes negative from some objective function.}
 
 \item{seed}{Seed for random operations}
 
 \item{validate}{Pass FALSE to skip validation (may be faster).}
+
+\item{breedargs}{Passed to \link{seibert.breed}; may be overridden by parameters.}
 }
 \value{
 A \code{list} of parameters with identical names to \code{params} and \code{values}

@@ -9,5 +9,6 @@ Description: Provides an interface for multi-parameter
 License: GPL-3
 Encoding: UTF-8
 Suggests: testthat
+Imports: plyr
 LazyData: true
 RoxygenNote: 5.0.1

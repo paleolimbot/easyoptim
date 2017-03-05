@@ -168,10 +168,12 @@ breed.rinterpolate.param.fixed <- function(param, value1, value2) {
 #'   If all parameters are named parameters, this can be a data.frame.
 #' @param probs A vector of probabilities with which to weight sampling of the breeding couples.
 #'   Can be NULL, indicating there is no preference.
-#' @param rescale Pass TRUE to rescale \code{probs} to the range (0, 1). This is useful if
+#' @param rescaler Pass TRUE to rescale \code{probs} to the range (0, 1). Or optionally a function
+#'   that transorms probs to valid probability weights. This is useful if
 #'   the value of probs used is sometimes negative from some objective function.
 #' @param seed Seed for random operations
 #' @param validate Pass FALSE to skip validation (may be faster).
+#' @param breedargs Passed to \link{seibert.breed}; may be overridden by parameters.
 #'
 #' @return A \code{list} of parameters with identical names to \code{params} and \code{values}
 #' @export
@@ -191,7 +193,11 @@ breed.rinterpolate.param.fixed <- function(param, value1, value2) {
 #'                            ifelse(values[[1]]=="heads", 0.6, 0.4))
 #' }
 #'
-seibert.evolve <- function(params, values, probs=NULL, rescale=FALSE, seed=NULL, validate=TRUE) {
+seibert.evolve <- function(params, values, probs=NULL, rescaler=c("rescale_none", "rescale", "squish"),
+                           seed=NULL, validate=TRUE,
+                           breedargs=list(breed.use1=0.41, breed.use2=0.41,
+                                          breed.rinterpolate=0.16, breed.mutate=0.02)) {
+  rescaler <- match.arg(rescaler)
   if(validate) {
     if(!is.list(params)) stop("Argument 'params' must be a list")
     if(any(!sapply(params, is.param))) stop("Argument 'params' must be a list of objects of type 'param'")
@@ -203,15 +209,13 @@ seibert.evolve <- function(params, values, probs=NULL, rescale=FALSE, seed=NULL,
 
   if(is.null(probs)) {
     probs <- rep(1, unique(sapply(values, length)))
+  } else {
+    probs <- get(rescaler)(probs)
   }
 
   # seed for replicability (before anything random happens)
   if(!is.null(seed)) set.seed(seed)
 
-  if(rescale) {
-    # rescale probabilities (in case some are negative) so they are all valid weights
-    probs <- rescale(probs)
-  }
   # first parameter set from the breeding pair
   rows1 <- sample(length(probs), size = length(probs), replace = TRUE, prob=probs)
   # second parameter set from the breeding pair
@@ -221,5 +225,80 @@ seibert.evolve <- function(params, values, probs=NULL, rescale=FALSE, seed=NULL,
   mapply(seibert.breed, params,
          lapply(values, "[", rows1),
          lapply(values, "[", rows2),
-         validate=validate, SIMPLIFY = FALSE)
+         validate=validate, prob=list(breedargs), SIMPLIFY = FALSE)
+}
+
+#' Seibert GAP function optimisation
+#'
+#' @param .fun The function to be called
+#' @param ... Arguments to be passed to .fun expressed as param objects.
+#' @param .objective An optional function to be called on the result of .fun to produce an
+#'   objective value. If this is not passed, the result of .fun is used to maximize.
+#' @param .validate Pass FALSE to skip validation. May be faster.
+#' @param .seed Seed for random operations.
+#' @param .rescaler An optional rescaling method used to rescale the output of .objective.
+#' @param .generations The number of generations to evolve the population.
+#' @param .pop The population size to use.
+#' @param .keepbest Pass TRUE to discard the results of a next generation if no individuals have
+#'   an improved objective value.
+#' @param .breedargs Passed to \link{seibert.breed}: default values for parameter breeding. These
+#'   may be overridden by additional arguments to each parameter.
+#' @param .progress A plyr progress bar to use, or 'none'.
+#' @param .output Use to output the best parameters, the last generation, or all parameters.
+#'
+#' @return A data.frame with columns for each named parameter
+#' @export
+#'
+seibert.gapo <- function(.fun, ..., .objective=function(x) x, .validate=TRUE, .seed=NULL,
+                         .rescaler=c("rescale_none", "rescale", "squish"),
+                         .generations=100, .pop=50, .keepbest=TRUE,
+                         .breedargs=list(breed.use1=0.41, breed.use2=0.41,
+                                         breed.rinterpolate=0.16, breed.mutate=0.02),
+                         .progress=c("none", "text", "tk"), .output=c("best", "last", "all")) {
+  .fun <- match.fun(.fun)
+  .objective <- match.fun(.objective)
+  .output <- match.arg(.output)
+  .rescaler <- match.arg(.rescaler)
+
+  if(.output == "all") {
+    ply <- plyr::adply
+  } else {
+    ply <- plyr::a_ply
+  }
+
+  # seed for replicability (before anything random happens)
+  if(!is.null(.seed)) set.seed(.seed)
+
+  # generate param list
+  params <- lapply(list(...), as.param)
+  # generate population
+  values <- lapply(params, initial.value, n=.pop)
+  # generate initial objective values
+  objects <- do.call(mapply, c(list(.fun), values, list(SIMPLIFY=FALSE, USE.NAMES=FALSE)))
+  objectives <- sapply(objects, .objective)
+
+  # loop through generations
+  out <- ply(expand.grid(generation=1:.generations), .margins=1, .fun=function(row) {
+    newvalues <- seibert.evolve(params, values, objectives, rescaler = .rescaler,
+                                breedargs=.breedargs, validate = .validate)
+    newobjects <- do.call(mapply, c(list(.fun), newvalues, list(SIMPLIFY=FALSE, USE.NAMES=FALSE)))
+    newobjectives <- sapply(newobjects, .objective)
+    if(.keepbest && (max(newobjectives) < max(objectives))) {
+      return(data.frame(newvalues, .objective=newobjectives, stringsAsFactors = FALSE))
+    } else {
+      objectives <- newobjectives
+      values <- newvalues
+      return(data.frame(newvalues, .objective=newobjectives, stringsAsFactors = FALSE))
+    }
+  })
+
+  if(.output == "all") {
+    return(out)
+  } else if(.output == "last") {
+    values$.objective <- objectives
+    return(values)
+  } else {
+    values$.objective <- objectives
+    return(lapply(values, "[", which.max(objectives)))
+  }
 }
