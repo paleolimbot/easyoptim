@@ -5,6 +5,7 @@
 \alias{random.value.param.discrete}
 \alias{random.value.param.distr.int}
 \alias{random.value.param.distributed}
+\alias{random.value.param.fixed}
 \alias{random.value.param.real}
 \title{Generate a random parameter value}
 \usage{
@@ -17,6 +18,8 @@ random.value(param, n = 1, seed = NULL)
 \method{random.value}{param.distributed}(param, n = 1, seed = NULL)
 
 \method{random.value}{param.distr.int}(param, n = 1, seed = NULL)
+
+\method{random.value}{param.fixed}(param, n = 1, seed = NULL)
 }
 \arguments{
 \item{param}{An object of type 'param'}

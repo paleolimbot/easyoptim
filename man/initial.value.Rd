@@ -2,9 +2,15 @@
 % Please edit documentation in R/params.R
 \name{initial.value}
 \alias{initial.value}
+\alias{initial.value.default}
+\alias{initial.value.param.fixed}
 \title{Generate an initial parameter value}
 \usage{
 initial.value(param, n = 1, seed = NULL)
+
+\method{initial.value}{default}(param, n = 1, seed = NULL)
+
+\method{initial.value}{param.fixed}(param, n = 1, seed = NULL)
 }
 \arguments{
 \item{param}{An object of type 'param'}

@@ -6,6 +6,7 @@
 \alias{is.param.valid.param.discrete}
 \alias{is.param.valid.param.distr.int}
 \alias{is.param.valid.param.distributed}
+\alias{is.param.valid.param.fixed}
 \alias{is.param.valid.param.real}
 \title{Validate parameter values}
 \usage{
@@ -20,6 +21,8 @@ is.param.valid(param, value)
 \method{is.param.valid}{param.distributed}(param, value)
 
 \method{is.param.valid}{param.distr.int}(param, value)
+
+\method{is.param.valid}{param.fixed}(param, value)
 }
 \arguments{
 \item{param}{An object of type 'param'}

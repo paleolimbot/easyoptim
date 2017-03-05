@@ -6,6 +6,7 @@
 \alias{breed.rinterpolate.param.discrete}
 \alias{breed.rinterpolate.param.distr.int}
 \alias{breed.rinterpolate.param.distributed}
+\alias{breed.rinterpolate.param.fixed}
 \alias{breed.rinterpolate.param.real}
 \alias{breed.use1}
 \alias{breed.use2}
@@ -26,6 +27,8 @@ breed.rinterpolate(param, value1, value2)
 \method{breed.rinterpolate}{param.distributed}(param, value1, value2)
 
 \method{breed.rinterpolate}{param.distr.int}(param, value1, value2)
+
+\method{breed.rinterpolate}{param.fixed}(param, value1, value2)
 }
 \arguments{
 \item{param}{An object of type 'param'}

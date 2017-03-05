@@ -62,6 +62,22 @@ param.real <- function(bounds, initial=NULL, ...) {
             class=c("param.real", "param"))
 }
 
+#' Define a fixed parameter
+#'
+#' @param value The value of the parameter, always.
+#'
+#' @return An object of type 'param.fixed'
+#' @export
+#'
+#' @examples
+#' param.fixed(5)
+#' # can be a complicated value
+#' param.fixed(list(a=1, b=2, c=4))
+#'
+param.fixed <- function(value) {
+  structure(list(initial=value), class=c("param.fixed", "param"))
+}
+
 #' Define a parameter with a known probability distribution
 #'
 #' @param type The type of probability distrubtion. This is used to call the functions
@@ -153,6 +169,10 @@ is.param <- function(x) {
   return(inherits(x, "param"))
 }
 
+as.param <- function(x, warn=TRUE) {
+
+}
+
 #' Generate a random parameter value
 #'
 #' @param param An object of type 'param'
@@ -204,7 +224,18 @@ random.value.param.distributed <- function(param, n=1, seed=NULL) {
 #' @rdname random.value
 #' @export
 random.value.param.distr.int <- function(param, n=1, seed=NULL) {
-  round(do.call(paste0("r", param$type), c(list(n), param$pargs)))
+  round(do.call(paste0("r", param$type), c(list(n), param$args)))
+}
+
+#' @rdname random.value
+#' @export
+random.value.param.fixed <- function(param, n=1, seed=NULL) {
+  if(is.atomic(param$initial) && (length(param$initial) == 1)) {
+    # probably in most cases the output will be a simple vector of length 1
+    rep(param$initial, n)
+  } else {
+    rep(list(param$initial), n)
+  }
 }
 
 
@@ -222,12 +253,23 @@ random.value.param.distr.int <- function(param, n=1, seed=NULL) {
 #'                     weights=c(0.45, 0.45, 0.1))
 #' initial.value(p, n=10)
 #'
-initial.value <- function(param, n=1, seed=NULL) {
+initial.value <- function(param, n=1, seed=NULL) UseMethod("initial.value")
+
+#' @rdname initial.value
+#' @export
+initial.value.default <- function(param, n=1, seed=NULL) {
   if(is.null(param$initial)) {
     random.value(param, n=n, seed=seed)
   } else {
     rep_len(param$initial, length.out=n)
   }
+}
+
+#' @rdname initial.value
+#' @export
+initial.value.param.fixed <- function(param, n=1, seed=NULL) {
+  # random.value implementation already takes into account NULL initial values, etc
+  random.value.param.fixed(param, n=n, seed=seed)
 }
 
 #' Validate parameter values
@@ -274,6 +316,12 @@ is.param.valid.param.distributed <- function(param, value) {
 #' @export
 is.param.valid.param.distr.int <- function(param, value) {
   ifelse(is.finite(value), ((value %% 1) == 0), FALSE)
+}
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.param.fixed <- function(param, value) {
+  mapply(identical, param$initial, value)
 }
 
 

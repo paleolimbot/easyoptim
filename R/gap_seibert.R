@@ -153,4 +153,73 @@ breed.rinterpolate.param.distr.int <- function(param, value1, value2) {
   round(breed.rinterpolate.param.real(param, value1, value2))
 }
 
+#' @rdname breeding
+#' @export
+breed.rinterpolate.param.fixed <- function(param, value1, value2) {
+  # mutation generates a random value, that, for a fixed parameter,
+  # will always be the initial value
+  breed.mutate(param, value1, value2)
+}
 
+#' Evolve a population of parameter values
+#'
+#' @param params A \code{list} of parameters with identical names to \code{values}
+#' @param values A \code{list} of parameter values with identical names to \code{params}.
+#'   If all parameters are named parameters, this can be a data.frame.
+#' @param probs A vector of probabilities with which to weight sampling of the breeding couples.
+#'   Can be NULL, indicating there is no preference.
+#' @param rescale Pass TRUE to rescale \code{probs} to the range (0, 1). This is useful if
+#'   the value of probs used is sometimes negative from some objective function.
+#' @param seed Seed for random operations
+#' @param validate Pass FALSE to skip validation (may be faster).
+#'
+#' @return A \code{list} of parameters with identical names to \code{params} and \code{values}
+#' @export
+#'
+#' @examples
+#' params <- list(param.discrete(c('heads', 'tails')),
+#'                param.real(c(0, 1)),
+#'                beersdrank=param.normal.int(5, 1),
+#'                taxes=param.fixed(TRUE))
+#' values <- lapply(params, initial.value, n=10)
+#'
+#' seibert.evolve(params, values)
+#'
+#' # 'select' for heads
+#' for(i in 1:10) {
+#'   values <- seibert.evolve(params, values,
+#'                            ifelse(values[[1]]=="heads", 0.6, 0.4))
+#' }
+#'
+seibert.evolve <- function(params, values, probs=NULL, rescale=FALSE, seed=NULL, validate=TRUE) {
+  if(validate) {
+    if(!is.list(params)) stop("Argument 'params' must be a list")
+    if(any(!sapply(params, is.param))) stop("Argument 'params' must be a list of objects of type 'param'")
+    if(!is.list(values)) stop("Argument 'values' must be a list or data frame")
+    if(!is.null(probs) && (nrow(data.frame(values)) != length(probs))) {
+      stop("Rows in values and length of probs must be equal")
+    }
+  }
+
+  if(is.null(probs)) {
+    probs <- rep(1, unique(sapply(values, length)))
+  }
+
+  # seed for replicability (before anything random happens)
+  if(!is.null(seed)) set.seed(seed)
+
+  if(rescale) {
+    # rescale probabilities (in case some are negative) so they are all valid weights
+    probs <- rescale(probs)
+  }
+  # first parameter set from the breeding pair
+  rows1 <- sample(length(probs), size = length(probs), replace = TRUE, prob=probs)
+  # second parameter set from the breeding pair
+  rows2 <- sample(length(probs), size = length(probs), replace = TRUE, prob=probs)
+
+  # apply by param and values, which should have identical names (or no names)
+  mapply(seibert.breed, params,
+         lapply(values, "[", rows1),
+         lapply(values, "[", rows2),
+         validate=validate, SIMPLIFY = FALSE)
+}
