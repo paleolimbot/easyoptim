@@ -22,7 +22,7 @@
 #' param.discrete(c(TRUE, FALSE), weights=c(0.75, 0.25))
 #'
 param.discrete <- function(choices, initial=NULL, weights=NULL, ordered=FALSE, ...) {
-  if(!is.atomic(choices)) stop("Choices must be an atomic vector")
+  if(is.null(choices) || !is.atomic(choices)) stop("Choices must be an atomic vector")
   if(!is.null(initial) && !all(initial %in% choices)) {
     stop("Argument 'initial' must be one of ", paste(choices, collapse=", "))
   }
@@ -230,5 +230,50 @@ initial.value <- function(param, n=1, seed=NULL) {
   }
 }
 
+#' Validate parameter values
+#'
+#' @param param An object of type 'param'
+#' @param value A vector of values to validate
+#'
+#' @return A logical vector indicating if \code{value} was valid.
+#' @export
+#'
+#' @examples
+#' p <- param.discrete(c('heads', 'tails'))
+#' is.param.valid(p, 'heads') # true
+#' is.param.valid(p, 'tails') # true
+#' is.param.valid(p, 'neither heads nor tails') # false
+#'
+is.param.valid <- function(param, value) UseMethod("is.param.valid")
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.default <- function(param, value) {
+  rep_len(FALSE, length.out = length(value))
+}
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.param.discrete <- function(param, value) {
+  value %in% param$choices
+}
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.param.real <- function(param, value) {
+  is.finite(value) & (value >= param$bounds[1]) & (value <= param$bounds[2])
+}
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.param.distributed <- function(param, value) {
+  is.finite(value)
+}
+
+#' @rdname is.param.valid
+#' @export
+is.param.valid.param.distr.int <- function(param, value) {
+  ifelse(is.finite(value), ((value %% 1) == 0), FALSE)
+}
 
 

@@ -90,3 +90,40 @@ test_that("initial values are the same with the same seed", {
   p <- param.normal.int(13, 3)
   expect_identical(initial.value(p, n=100, seed=10), initial.value(p, n=100, seed=10))
 })
+
+test_that("parameter validation works properly", {
+  # test for null values
+  expect_identical(is.param.valid(NULL, NULL), logical(0))
+
+  p <- param.discrete(c('heads', 'tails'))
+  expect_true(is.param.valid(p, 'heads'))
+  expect_true(is.param.valid(p, 'tails'))
+  expect_false(is.param.valid(p, 'notheadsortails'))
+  # check vectorization
+  expect_length(is.param.valid(p, c('heads', 'tails', 'notheadsortails')), 3)
+
+  p <- param.real(c(-10, 10))
+  expect_true(is.param.valid(p, 0))
+  expect_false(is.param.valid(p, "10"))
+  expect_false(is.param.valid(p, 10.1))
+  expect_false(is.param.valid(p, -10.1))
+  expect_false(is.param.valid(p, NA))
+  expect_false(is.param.valid(p, Inf))
+  expect_false(is.param.valid(p, NaN))
+
+  p <- param.distributed()
+  expect_true(is.param.valid(p, 0))
+  expect_false(is.param.valid(p, "10"))
+  expect_false(is.param.valid(p, NA))
+  expect_false(is.param.valid(p, Inf))
+  expect_false(is.param.valid(p, NaN))
+
+  p <- param.distr.int()
+  expect_true(is.param.valid(p, 0L))
+  expect_true(is.param.valid(p, 0))
+  expect_false(is.param.valid(p, 10.1))
+  expect_false(is.param.valid(p, "10"))
+  expect_false(is.param.valid(p, NA))
+  expect_false(is.param.valid(p, Inf))
+  expect_false(is.param.valid(p, NaN))
+})
