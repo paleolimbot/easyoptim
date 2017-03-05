@@ -274,31 +274,37 @@ seibert.gapo <- function(.fun, ..., .objective=function(x) x, .validate=TRUE, .s
   # generate population
   values <- lapply(params, initial.value, n=.pop)
   # generate initial objective values
+  if(.progress != "none") message("Generating initial population")
   objects <- do.call(mapply, c(list(.fun), values, list(SIMPLIFY=FALSE, USE.NAMES=FALSE)))
   objectives <- sapply(objects, .objective)
 
+  # use environment to keep track of objecives and values
+  valenv <- new.env(parent=emptyenv())
+  valenv$values <- values
+  valenv$objectives <- objectives
+
   # loop through generations
   out <- ply(expand.grid(generation=1:.generations), .margins=1, .fun=function(row) {
-    newvalues <- seibert.evolve(params, values, objectives, rescaler = .rescaler,
+    newvalues <- seibert.evolve(params, valenv$values, objectives, rescaler = .rescaler,
                                 breedargs=.breedargs, validate = .validate)
     newobjects <- do.call(mapply, c(list(.fun), newvalues, list(SIMPLIFY=FALSE, USE.NAMES=FALSE)))
     newobjectives <- sapply(newobjects, .objective)
     if(.keepbest && (max(newobjectives) < max(objectives))) {
       return(data.frame(newvalues, .objective=newobjectives, stringsAsFactors = FALSE))
     } else {
-      objectives <- newobjectives
-      values <- newvalues
+      assign("objectives", newobjectives, envir = valenv)
+      assign("values", newvalues, envir = valenv)
       return(data.frame(newvalues, .objective=newobjectives, stringsAsFactors = FALSE))
     }
-  })
+  }, .progress=.progress)
 
   if(.output == "all") {
     return(out)
   } else if(.output == "last") {
-    values$.objective <- objectives
-    return(values)
+    valenv$values$.objective <- valenv$objectives
+    return(valenv$values)
   } else {
     values$.objective <- objectives
-    return(lapply(values, "[", which.max(objectives)))
+    return(lapply(valenv$values, "[", which.max(valenv$objectives)))
   }
 }

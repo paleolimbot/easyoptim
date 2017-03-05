@@ -1,0 +1,59 @@
+---
+title: "README"
+author: "Dewey Dunnington"
+date: "March 5, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(TUWmodel)
+## Load the data
+data(example_TUWmodel)
+## Simulate runoff and plot observed vs simulated series
+## Lumped case (weighted means of the inputs)
+simLump <- TUWmodel(prec=apply(P_Vils, 1, weighted.mean, w=areas_Vils)[1:1000],
+                    airt=apply(T_Vils, 1, weighted.mean, w=areas_Vils)[1:1000],
+                    ep=apply(PET_Vils, 1, weighted.mean, w=areas_Vils)[1:1000],
+                    area=sum(areas_Vils),
+                    param=c(1.02,1.70,2,0,-0.336,
+                            0.934,121,2.52,
+                            0.473,9.06,142,
+                            50.1,2.38,10,25))
+plot(as.Date(names(Q_Vils[1:1000])), Q_Vils[1:1000], type="l", xlab="", ylab="Discharges [mm/day]")
+lines(as.Date(rownames(T_Vils[1:1000,])), simLump$q, col=2)
+legend("topleft", legend=c("Observations","Simulations"), col=c(1,2), lty=1, bty="n")
+```
+
+
+```{r}
+# create wrapper for function where parameters are keyword arguments
+TUWwrap <- function(SCF=1.02, DDF=1.70, Tr=2, Ts=0, Tm=-0.336, LPrat=0.934, FC=121, BETA=2.52, 
+                    k0=0.473, k1=9.06, k2=142, lsuz=50.1, cperc=2.38, bmax=10, croute=25) {
+  TUWmodel(prec=apply(P_Vils, 1, weighted.mean, w=areas_Vils)[1:100],
+           airt=apply(T_Vils, 1, weighted.mean, w=areas_Vils)[1:100],
+           ep=apply(PET_Vils, 1, weighted.mean, w=areas_Vils)[1:100],
+           area=sum(areas_Vils),
+           param=c(SCF, DDF, Tr, Ts, Tm, LPrat, FC, BETA, 
+                   k0, k1, k2, lsuz, cperc, bmax, croute))
+}
+# create objective function (efficiency)
+Reff <- function(obs, siml) {
+  sum((obs-siml)^2) / sum((obs-mean(obs)^2))
+}
+
+result <- seibert.gapo(TUWwrap, 
+                       SCF=param.real(c(0.9, 1.5)), DDF=param.real(c(0, 5)), 
+                       Tr=param.real(c(1, 3)), Ts=param.real(c(-3, 1)), Tm=param.real(c(-2, 2)), 
+                       LPrat=param.real(c(0, 1)), FC=param.real(c(0, 600)), BETA=param.real(c(0, 20)), 
+                       k0=param.real(c(0, 2.0)), k1=param.real(c(2, 30)), k2=param.real(c(30, 250)), 
+                       lsuz=param.real(c(1, 100)), cperc=param.real(c(0, 8)), bmax=param.real(c(0, 30)),
+                       croute=param.real(c(0, 50)),
+                       .objective=function(x) Reff(Q_Vils[1:100], x$q),
+                       .rescaler="rescale", .output = "all", .generations = 100,
+                       .progress = "text")
+
+```
