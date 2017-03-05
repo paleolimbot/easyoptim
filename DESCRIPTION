@@ -1,0 +1,13 @@
+Package: easyoptim
+Type: Package
+Title: Easy Muti-Parameter Optimisation
+Version: 0.1.9000
+Author: Dewey Dunnington <dewey@fishandwhistle.net>
+Maintainer: Dewey Dunnington <dewey@fishandwhistle.net>
+Description: Provides an interface for multi-parameter
+    function optimisation in R.
+License: GPL-3
+Encoding: UTF-8
+Suggests: testthat
+LazyData: true
+RoxygenNote: 5.0.1
